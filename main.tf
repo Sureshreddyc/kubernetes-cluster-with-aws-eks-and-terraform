@@ -80,30 +80,43 @@ module "eks" {
   }
 }
 
-# IAM User Creation with Admin Policy
+# IAM User Creation with Full Access Policy
 resource "aws_iam_user" "admin_user" {
   name = var.user_name
 }
 
-resource "aws_iam_policy" "admin_policy" {
-  name        = "${var.user_name}-admin-policy"
-  description = "Admin policy for ${var.user_name}"
+resource "aws_iam_policy" "eks_full_access_policy" {
+  name        = "eks-full-access-policy"
+  description = "Full access policy for EKS management"
 
   policy = jsonencode({
     "Version" : "2012-10-17",
     "Statement" : [
       {
         "Effect" : "Allow",
-        "Action" : "*",
+        "Action" : [
+          "eks:*",
+          "iam:*",
+          "logs:*",
+          "ec2:*",
+          "cloudwatch:*",
+          "autoscaling:*",
+          "elasticloadbalancing:*",
+          "ecr:*",
+          "s3:*",
+          "route53:*",
+          "vpc:*",
+          "cloudformation:*"
+        ],
         "Resource" : "*"
       }
     ]
   })
 }
 
-resource "aws_iam_user_policy_attachment" "admin_policy_attachment" {
+resource "aws_iam_user_policy_attachment" "eks_full_access_attachment" {
   user       = aws_iam_user.admin_user.name
-  policy_arn = aws_iam_policy.admin_policy.arn
+  policy_arn = aws_iam_policy.eks_full_access_policy.arn
 }
 
 # Output EKS cluster name and VPC ID
