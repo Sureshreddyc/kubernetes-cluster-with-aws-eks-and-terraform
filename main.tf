@@ -79,8 +79,7 @@ module "eks" {
     }
   }
 
-  # CloudWatch Logs permission
-  manage_cluster_cloudwatch_log_group = true
+  # CloudWatch Logs management should be handled differently if required
 }
 
 # IAM Policy for CloudWatch Logs and IAM permissions
