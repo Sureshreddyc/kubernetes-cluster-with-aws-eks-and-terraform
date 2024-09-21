@@ -1,3 +1,4 @@
+# Specify the required provider
 terraform {
   required_providers {
     aws = {
@@ -7,16 +8,38 @@ terraform {
   }
 }
 
-provider "aws" {
-  region = "eu-west-1"
+# Declare AWS variables
+variable "aws_access_key" {
+  type        = string
+  description = "AWS Access Key"
 }
 
+variable "aws_secret_key" {
+  type        = string
+  description = "AWS Secret Key"
+}
+
+variable "region" {
+  type        = string
+  description = "AWS Region"
+  default     = "eu-west-1"  # Default region
+}
+
+# AWS provider configuration using variables
+provider "aws" {
+  access_key = var.aws_access_key
+  secret_key = var.aws_secret_key
+  region     = var.region
+}
+
+# Fetch availability zones
 data "aws_availability_zones" "available" {
   state = "available"
 }
 
+# VPC module
 module "vpc" {
-  source = "terraform-aws-modules/vpc/aws"
+  source  = "terraform-aws-modules/vpc/aws"
   version = "4.0.0"
 
   name = "stw-vpc"
@@ -29,13 +52,9 @@ module "vpc" {
   enable_nat_gateway = true
   single_nat_gateway = true
   enable_vpn_gateway = false
-
 }
 
-
-
-
-
+# Define local variables for VPC details
 locals {
   vpc_id              = module.vpc.vpc_id
   vpc_cidr            = module.vpc.vpc_cidr_block
@@ -44,12 +63,7 @@ locals {
   subnets_ids         = concat(local.public_subnets_ids, local.private_subnets_ids)
 }
 
-
-
-################
-#  EKS MODULE  #
-################
-
+# EKS module
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 19.0"
@@ -69,7 +83,6 @@ module "eks" {
       service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
       configuration_values = jsonencode({
         env = {
-          # Reference docs https://docs.aws.amazon.com/eks/latest/userguide/cni-increase-ip-addresses.html
           ENABLE_PREFIX_DELEGATION = "true"
           WARM_PREFIX_TARGET       = "1"
         }
@@ -95,16 +108,9 @@ module "eks" {
       desired_size = 2
     }
   }
-
 }
 
-
-
-
-################################
-#  ROLES FOR SERVICE ACCOUNTS  #
-################################
-
+# VPC CNI IRSA module
 module "vpc_cni_irsa" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
   version = "~> 5.0"
@@ -120,5 +126,3 @@ module "vpc_cni_irsa" {
     }
   }
 }
-
-
