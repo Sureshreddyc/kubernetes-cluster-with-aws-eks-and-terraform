@@ -19,6 +19,7 @@ variable "region" {
 
 variable "user_name" {
   description = "IAM user for attaching policies"
+  default     = "suresh"  # Default to your IAM username
 }
 
 # Data source to get availability zones
@@ -56,13 +57,13 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 19.0"
 
-  cluster_name                  = "stw-cluster"
-  cluster_version               = "1.24"
+  cluster_name    = "poc-eks-cluster"
+  cluster_version = "1.24"
   cluster_endpoint_public_access = true
 
-  vpc_id                       = local.vpc_id
-  subnet_ids                   = local.private_subnets_ids
-  control_plane_subnet_ids     = local.private_subnets_ids
+  vpc_id                   = local.vpc_id
+  subnet_ids               = local.private_subnets_ids
+  control_plane_subnet_ids = local.private_subnets_ids
 
   eks_managed_node_group_defaults = {
     ami_type                   = "AL2_x86_64"
@@ -79,46 +80,30 @@ module "eks" {
   }
 }
 
-# IAM Policy for EKS management and CloudWatch Logs
-resource "aws_iam_policy" "eks_permissions_policy" {
-  name        = "eks-permissions-policy"
-  description = "Policy for EKS cluster management including CloudWatch Logs and IAM permissions"
+# IAM User Creation with Admin Policy
+resource "aws_iam_user" "admin_user" {
+  name = var.user_name
+}
+
+resource "aws_iam_policy" "admin_policy" {
+  name        = "${var.user_name}-admin-policy"
+  description = "Admin policy for ${var.user_name}"
 
   policy = jsonencode({
-    "Version": "2012-10-17",
-    "Statement": [
+    "Version" : "2012-10-17",
+    "Statement" : [
       {
-        "Effect": "Allow",
-        "Action": [
-          "eks:CreateCluster",
-          "eks:DeleteCluster",
-          "eks:DescribeCluster",
-          "eks:ListClusters",
-          "eks:CreateNodegroup",
-          "eks:DeleteNodegroup",
-          "eks:DescribeNodegroup",
-          "eks:ListNodegroups",
-          "eks:UpdateClusterConfig",
-          "eks:UpdateNodegroupConfig",
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents",
-          "iam:GetRolePolicy",
-          "iam:GetPolicy",
-          "iam:CreatePolicy",
-          "iam:AttachRolePolicy",
-          "iam:PassRole"
-        ],
-        "Resource": "*"
+        "Effect" : "Allow",
+        "Action" : "*",
+        "Resource" : "*"
       }
     ]
   })
 }
 
-# Attach IAM policy to the user
-resource "aws_iam_user_policy_attachment" "eks_policy_attachment" {
-  user       = var.user_name
-  policy_arn = aws_iam_policy.eks_permissions_policy.arn
+resource "aws_iam_user_policy_attachment" "admin_policy_attachment" {
+  user       = aws_iam_user.admin_user.name
+  policy_arn = aws_iam_policy.admin_policy.arn
 }
 
 # Output EKS cluster name and VPC ID
