@@ -8,64 +8,13 @@ terraform {
 }
 
 provider "aws" {
-  region = var.region
+  region = "eu-west-1"
 }
 
-# Variables
-variable "region" {
-  description = "AWS region"
-  default     = "ap-south-1"
-}
-
-# IAM User for Admin
-resource "aws_iam_user" "default_admin_user" {
-  name = "suresh"
-}
-
-# Attach Administrator Access Policy
-resource "aws_iam_user_policy_attachment" "admin_policy" {
-  user       = aws_iam_user.default_admin_user.name
-  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
-}
-
-# Custom Permissions Policy for EKS Management
-resource "aws_iam_policy" "eks_permissions_policy" {
-  name        = "EKSManagementPolicy"
-  description = "Policy to allow management of EKS resources"
-  
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "eks:*",
-          "iam:PassRole",
-          "iam:GetPolicy",
-          "iam:GetRolePolicy",
-          "iam:ListPolicies",
-          "iam:ListRoles",
-          "iam:ListAttachedUserPolicies",
-          "iam:ListUserPolicies"
-        ]
-        Resource = "*"
-      }
-    ]
-  })
-}
-
-# Attach the custom policy to the user
-resource "aws_iam_user_policy_attachment" "eks_policy_attachment" {
-  user       = aws_iam_user.default_admin_user.name
-  policy_arn = aws_iam_policy.eks_permissions_policy.arn
-}
-
-# Data source to get availability zones
 data "aws_availability_zones" "available" {
   state = "available"
 }
 
-# VPC Module
 module "vpc" {
   source = "terraform-aws-modules/vpc/aws"
   version = "4.0.0"
@@ -79,29 +28,60 @@ module "vpc" {
 
   enable_nat_gateway = true
   single_nat_gateway = true
+  enable_vpn_gateway = false
+
 }
 
-# Locals for VPC and subnets
+
+
+
+
 locals {
   vpc_id              = module.vpc.vpc_id
   vpc_cidr            = module.vpc.vpc_cidr_block
   public_subnets_ids  = module.vpc.public_subnets
   private_subnets_ids = module.vpc.private_subnets
+  subnets_ids         = concat(local.public_subnets_ids, local.private_subnets_ids)
 }
 
-# EKS Cluster Module
+
+
+################
+#  EKS MODULE  #
+################
+
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 19.0"
 
-  cluster_name                = "poc-eks-cluster"
-  cluster_version             = "1.24"
+  cluster_name    = "stw-cluster"
+  cluster_version = "1.24"
+
   cluster_endpoint_public_access = true
+
+  cluster_addons = {
+    kube-proxy = {
+      most_recent = true
+    }
+    vpc-cni = {
+      most_recent              = true
+      before_compute           = true
+      service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
+      configuration_values = jsonencode({
+        env = {
+          # Reference docs https://docs.aws.amazon.com/eks/latest/userguide/cni-increase-ip-addresses.html
+          ENABLE_PREFIX_DELEGATION = "true"
+          WARM_PREFIX_TARGET       = "1"
+        }
+      })
+    }
+  }
 
   vpc_id                   = local.vpc_id
   subnet_ids               = local.private_subnets_ids
   control_plane_subnet_ids = local.private_subnets_ids
 
+  # EKS Managed Node Group(s)
   eks_managed_node_group_defaults = {
     ami_type                   = "AL2_x86_64"
     instance_types             = ["t3.medium"]
@@ -115,15 +95,29 @@ module "eks" {
       desired_size = 2
     }
   }
+
 }
 
-# Output EKS cluster name and VPC ID
-output "eks_cluster_name" {
-  description = "Name of the EKS cluster"
-  value       = module.eks.cluster_id
+
+
+
+################################
+#  ROLES FOR SERVICE ACCOUNTS  #
+################################
+
+module "vpc_cni_irsa" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "~> 5.0"
+
+  role_name_prefix      = "VPC-CNI-IRSA"
+  attach_vpc_cni_policy = true
+  vpc_cni_enable_ipv4   = true
+
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:aws-node"]
+    }
+  }
 }
 
-output "vpc_id" {
-  description = "VPC ID of the cluster"
-  value       = module.vpc.vpc_id
-}
