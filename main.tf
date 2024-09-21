@@ -29,8 +29,8 @@ resource "aws_iam_user_policy_attachment" "admin_policy" {
 }
 
 # Custom Permissions for IAM User
-resource "aws_iam_user_policy" "custom_permissions" {
-  name = "custom-permissions"
+resource "aws_iam_user_policy" "suresh_permissions" {
+  name = "SureshPermissionsPolicy"
   user = aws_iam_user.default_admin_user.name
 
   policy = jsonencode({
@@ -41,10 +41,10 @@ resource "aws_iam_user_policy" "custom_permissions" {
         Action = [
           "iam:GetPolicy",
           "iam:GetRolePolicy",
-          "iam:ListAttachedUserPolicies",
-          "iam:ListUserPolicies",
           "iam:ListPolicies",
-          "iam:ListRoles"
+          "iam:ListRoles",
+          "iam:ListAttachedUserPolicies",
+          "iam:ListUserPolicies"
         ]
         Resource = "*"
       }
