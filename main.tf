@@ -29,12 +29,7 @@ module "vpc" {
   enable_nat_gateway = true
   single_nat_gateway = true
   enable_vpn_gateway = false
-
 }
-
-
-
-
 
 locals {
   vpc_id              = module.vpc.vpc_id
@@ -44,7 +39,36 @@ locals {
   subnets_ids         = concat(local.public_subnets_ids, local.private_subnets_ids)
 }
 
+################
+#  IAM Policy  #
+################
 
+resource "aws_iam_policy" "eks_permissions_policy" {
+  name        = "EKSPermissionsPolicy"
+  description = "Policy for EKS management permissions"
+  policy      = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "iam:GetPolicy",
+          "iam:GetRolePolicy",
+          "iam:ListAttachedRolePolicies",
+          "iam:ListRolePolicies",
+          "iam:ListRoles",
+          "iam:PassRole"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_user_policy_attachment" "attach_policy" {
+  user       = "suresh"  # Replace with your IAM username
+  policy_arn = aws_iam_policy.eks_permissions_policy.arn
+}
 
 ################
 #  EKS MODULE  #
@@ -69,7 +93,6 @@ module "eks" {
       service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
       configuration_values = jsonencode({
         env = {
-          # Reference docs https://docs.aws.amazon.com/eks/latest/userguide/cni-increase-ip-addresses.html
           ENABLE_PREFIX_DELEGATION = "true"
           WARM_PREFIX_TARGET       = "1"
         }
@@ -81,7 +104,6 @@ module "eks" {
   subnet_ids               = local.private_subnets_ids
   control_plane_subnet_ids = local.private_subnets_ids
 
-  # EKS Managed Node Group(s)
   eks_managed_node_group_defaults = {
     ami_type                   = "AL2_x86_64"
     instance_types             = ["t3.medium"]
@@ -95,11 +117,7 @@ module "eks" {
       desired_size = 2
     }
   }
-
 }
-
-
-
 
 ################################
 #  ROLES FOR SERVICE ACCOUNTS  #
@@ -120,4 +138,3 @@ module "vpc_cni_irsa" {
     }
   }
 }
-
