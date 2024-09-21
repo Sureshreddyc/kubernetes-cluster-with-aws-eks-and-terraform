@@ -52,7 +52,7 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 19.0"
 
-  cluster_name    = "poc-eks-cluster"  # Updated to your specified cluster name
+  cluster_name    = "poc-eks-cluster"
   cluster_version = "1.24"
   cluster_endpoint_public_access = true
 
@@ -96,9 +96,38 @@ resource "aws_iam_policy" "admin_policy" {
   })
 }
 
+resource "aws_iam_policy" "iam_permissions_policy" {
+  name        = "IAMPermissionsPolicy"
+  description = "Policy to allow IAM actions."
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "iam:GetPolicy",
+          "iam:GetRolePolicy",
+          "iam:CreatePolicy",
+          "iam:AttachRolePolicy",
+          "iam:PassRole",
+          "iam:ListPolicies",
+          "iam:ListAttachedUserPolicies"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
 resource "aws_iam_user_policy_attachment" "admin_policy_attachment" {
   user       = aws_iam_user.default_user.name
   policy_arn = aws_iam_policy.admin_policy.arn
+}
+
+resource "aws_iam_user_policy_attachment" "iam_policy_attachment" {
+  user       = aws_iam_user.default_user.name
+  policy_arn = aws_iam_policy.iam_permissions_policy.arn
 }
 
 # IAM Policy for CloudWatch Logs and IAM permissions
@@ -117,17 +146,6 @@ resource "aws_iam_policy" "eks_permissions_policy" {
           "logs:PutLogEvents"
         ],
         "Resource" : "arn:aws:logs:*:*:*"
-      },
-      {
-        "Effect" : "Allow",
-        "Action" : [
-          "iam:GetRolePolicy",
-          "iam:GetPolicy",
-          "iam:CreatePolicy",
-          "iam:AttachRolePolicy",
-          "iam:PassRole"
-        ],
-        "Resource" : "*"
       }
     ]
   })
