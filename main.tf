@@ -28,17 +28,19 @@ resource "aws_iam_user_policy_attachment" "admin_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
 
-# Custom Permissions for IAM User
-resource "aws_iam_user_policy" "suresh_permissions" {
-  name = "SureshPermissionsPolicy"
-  user = aws_iam_user.default_admin_user.name
-
+# Custom Permissions Policy for EKS Management
+resource "aws_iam_policy" "eks_permissions_policy" {
+  name        = "EKSManagementPolicy"
+  description = "Policy to allow management of EKS resources"
+  
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
         Effect = "Allow"
         Action = [
+          "eks:*",
+          "iam:PassRole",
           "iam:GetPolicy",
           "iam:GetRolePolicy",
           "iam:ListPolicies",
@@ -50,6 +52,12 @@ resource "aws_iam_user_policy" "suresh_permissions" {
       }
     ]
   })
+}
+
+# Attach the custom policy to the user
+resource "aws_iam_user_policy_attachment" "eks_policy_attachment" {
+  user       = aws_iam_user.default_admin_user.name
+  policy_arn = aws_iam_policy.eks_permissions_policy.arn
 }
 
 # Data source to get availability zones
