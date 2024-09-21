@@ -53,19 +53,25 @@ resource "aws_iam_policy" "eks_permissions_policy" {
         Effect = "Allow",
         Action = [
           "iam:GetPolicy",
+          "iam:GetPolicyVersion",
+          "iam:ListAttachedRolePolicies",
+          "iam:ListPolicies",
+          "iam:ListRolePolicies",
+          "iam:GetRolePolicy",
           "iam:CreatePolicy",
           "iam:AttachUserPolicy",
-          "iam:GetRolePolicy",
           "iam:CreateRole",
-          "iam:PassRole",
-          "iam:ListRoles",
-          "iam:ListAttachedRolePolicies",
-          "iam:ListRolePolicies"
+          "iam:PassRole"
         ],
         Resource = "*"
       }
     ]
   })
+}
+
+resource "aws_iam_user_policy_attachment" "attach_policy" {
+  user       = "suresh"  # Ensure this matches your IAM username
+  policy_arn = aws_iam_policy.eks_permissions_policy.arn
 }
 
 ################
