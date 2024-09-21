@@ -68,14 +68,7 @@ resource "aws_iam_policy" "eks_permissions_policy" {
   })
 }
 
-resource "aws_iam_user" "suresh" {
-  name = "suresh"
-}
-
-resource "aws_iam_user_policy_attachment" "attach_policy" {
-  user       = aws_iam_user.suresh.name
-  policy_arn = aws_iam_policy.eks_permissions_policy.arn
-}
+# Assuming the default IAM user already has permissions, no need to create a new one
 
 ################
 #  EKS MODULE  #
