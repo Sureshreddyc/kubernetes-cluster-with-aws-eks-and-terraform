@@ -17,14 +17,20 @@ variable "region" {
   default     = "ap-south-1"
 }
 
-variable "user_name" {
-  description = "IAM user for attaching policies"
-  default     = "suresh"  # Default to your IAM username
-}
-
 # Data source to get availability zones
 data "aws_availability_zones" "available" {
   state = "available"
+}
+
+# Create IAM User
+resource "aws_iam_user" "default_user" {
+  name = "default-admin-user"
+}
+
+# Attach AdministratorAccess Policy to IAM User
+resource "aws_iam_user_policy_attachment" "admin_policy_attachment" {
+  user       = aws_iam_user.default_user.name
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
 
 # VPC Module
@@ -80,45 +86,6 @@ module "eks" {
   }
 }
 
-# IAM User Creation with Full Access Policy
-resource "aws_iam_user" "admin_user" {
-  name = var.user_name
-}
-
-resource "aws_iam_policy" "eks_full_access_policy" {
-  name        = "eks-full-access-policy"
-  description = "Full access policy for EKS management"
-
-  policy = jsonencode({
-    "Version" : "2012-10-17",
-    "Statement" : [
-      {
-        "Effect" : "Allow",
-        "Action" : [
-          "eks:*",
-          "iam:*",
-          "logs:*",
-          "ec2:*",
-          "cloudwatch:*",
-          "autoscaling:*",
-          "elasticloadbalancing:*",
-          "ecr:*",
-          "s3:*",
-          "route53:*",
-          "vpc:*",
-          "cloudformation:*"
-        ],
-        "Resource" : "*"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_user_policy_attachment" "eks_full_access_attachment" {
-  user       = aws_iam_user.admin_user.name
-  policy_arn = aws_iam_policy.eks_full_access_policy.arn
-}
-
 # Output EKS cluster name and VPC ID
 output "eks_cluster_name" {
   description = "Name of the EKS cluster"
@@ -128,4 +95,9 @@ output "eks_cluster_name" {
 output "vpc_id" {
   description = "VPC ID of the cluster"
   value       = module.vpc.vpc_id
+}
+
+output "default_user" {
+  description = "Default IAM User"
+  value       = aws_iam_user.default_user.name
 }
