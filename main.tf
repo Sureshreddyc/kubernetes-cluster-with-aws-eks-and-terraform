@@ -17,6 +17,17 @@ variable "region" {
   default     = "ap-south-1"
 }
 
+# IAM User for Admin
+resource "aws_iam_user" "default_admin_user" {
+  name = "suresh"
+}
+
+# Attach Administrator Access Policy
+resource "aws_iam_user_policy_attachment" "admin_policy" {
+  user       = aws_iam_user.default_admin_user.name
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+}
+
 # Data source to get availability zones
 data "aws_availability_zones" "available" {
   state = "available"
@@ -36,7 +47,6 @@ module "vpc" {
 
   enable_nat_gateway = true
   single_nat_gateway = true
-  enable_vpn_gateway = false
 }
 
 # Locals for VPC and subnets
@@ -52,8 +62,8 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 19.0"
 
-  cluster_name    = "poc-eks-cluster"
-  cluster_version = "1.24"
+  cluster_name                = "poc-eks-cluster"
+  cluster_version             = "1.24"
   cluster_endpoint_public_access = true
 
   vpc_id                   = local.vpc_id
@@ -73,88 +83,6 @@ module "eks" {
       desired_size = 2
     }
   }
-}
-
-# Create default IAM user with admin permissions
-resource "aws_iam_user" "default_user" {
-  name = "suresh"
-}
-
-resource "aws_iam_policy" "admin_policy" {
-  name        = "AdminPolicy"
-  description = "Administrator Access Policy"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = "*"
-        Resource = "*"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_policy" "iam_permissions_policy" {
-  name        = "IAMPermissionsPolicy"
-  description = "Policy to allow IAM actions."
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "iam:GetPolicy",
-          "iam:GetRolePolicy",
-          "iam:CreatePolicy",
-          "iam:AttachRolePolicy",
-          "iam:PassRole",
-          "iam:ListPolicies",
-          "iam:ListAttachedUserPolicies"
-        ]
-        Resource = "*"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_user_policy_attachment" "admin_policy_attachment" {
-  user       = aws_iam_user.default_user.name
-  policy_arn = aws_iam_policy.admin_policy.arn
-}
-
-resource "aws_iam_user_policy_attachment" "iam_policy_attachment" {
-  user       = aws_iam_user.default_user.name
-  policy_arn = aws_iam_policy.iam_permissions_policy.arn
-}
-
-# IAM Policy for CloudWatch Logs and IAM permissions
-resource "aws_iam_policy" "eks_permissions_policy" {
-  name        = "eks-permissions-policy"
-  description = "Policy for EKS cluster management including CloudWatch Logs and IAM permissions"
-
-  policy = jsonencode({
-    "Version" : "2012-10-17",
-    "Statement" : [
-      {
-        "Effect" : "Allow",
-        "Action" : [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ],
-        "Resource" : "arn:aws:logs:*:*:*"
-      }
-    ]
-  })
-}
-
-# Attach IAM policy to the user
-resource "aws_iam_user_policy_attachment" "eks_policy_attachment" {
-  user       = aws_iam_user.default_user.name
-  policy_arn = aws_iam_policy.eks_permissions_policy.arn
 }
 
 # Output EKS cluster name and VPC ID
