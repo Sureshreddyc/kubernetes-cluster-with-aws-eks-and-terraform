@@ -8,7 +8,7 @@ terraform {
 }
 
 provider "aws" {
-  region = "eu-west-1"
+  region = "ap-south-1"
 }
 
 data "aws_availability_zones" "available" {
@@ -53,11 +53,14 @@ resource "aws_iam_policy" "eks_permissions_policy" {
         Effect = "Allow",
         Action = [
           "iam:GetPolicy",
+          "iam:CreatePolicy",
+          "iam:AttachUserPolicy",
           "iam:GetRolePolicy",
-          "iam:ListAttachedRolePolicies",
-          "iam:ListRolePolicies",
+          "iam:CreateRole",
+          "iam:PassRole",
           "iam:ListRoles",
-          "iam:PassRole"
+          "iam:ListAttachedRolePolicies",
+          "iam:ListRolePolicies"
         ],
         Resource = "*"
       }
@@ -66,7 +69,7 @@ resource "aws_iam_policy" "eks_permissions_policy" {
 }
 
 resource "aws_iam_user_policy_attachment" "attach_policy" {
-  user       = "suresh"  # Replace with your IAM username
+  user       = "suresh"  # Ensure this matches your IAM username
   policy_arn = aws_iam_policy.eks_permissions_policy.arn
 }
 
