@@ -68,8 +68,6 @@ resource "aws_iam_policy" "eks_permissions_policy" {
   })
 }
 
-# Assuming the default IAM user already has permissions, no need to create a new one
-
 ################
 #  EKS MODULE  #
 ################
