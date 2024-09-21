@@ -68,8 +68,12 @@ resource "aws_iam_policy" "eks_permissions_policy" {
   })
 }
 
+resource "aws_iam_user" "suresh" {
+  name = "suresh"
+}
+
 resource "aws_iam_user_policy_attachment" "attach_policy" {
-  user       = "suresh"  # Ensure this matches your IAM username
+  user       = aws_iam_user.suresh.name
   policy_arn = aws_iam_policy.eks_permissions_policy.arn
 }
 
