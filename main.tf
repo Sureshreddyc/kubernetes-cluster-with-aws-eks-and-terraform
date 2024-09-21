@@ -56,15 +56,14 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 19.0"
 
-  cluster_name    = "stw-cluster"
-  cluster_version = "1.24"
+  cluster_name                  = "stw-cluster"
+  cluster_version               = "1.24"
   cluster_endpoint_public_access = true
 
-  vpc_id                   = local.vpc_id
-  subnet_ids               = local.private_subnets_ids
-  control_plane_subnet_ids = local.private_subnets_ids
+  vpc_id                       = local.vpc_id
+  subnet_ids                   = local.private_subnets_ids
+  control_plane_subnet_ids     = local.private_subnets_ids
 
-  # EKS Managed Node Group(s)
   eks_managed_node_group_defaults = {
     ami_type                   = "AL2_x86_64"
     instance_types             = ["t3.medium"]
@@ -78,37 +77,39 @@ module "eks" {
       desired_size = 2
     }
   }
-
-  # CloudWatch Logs management should be handled differently if required
 }
 
-# IAM Policy for CloudWatch Logs and IAM permissions
+# IAM Policy for EKS management and CloudWatch Logs
 resource "aws_iam_policy" "eks_permissions_policy" {
   name        = "eks-permissions-policy"
   description = "Policy for EKS cluster management including CloudWatch Logs and IAM permissions"
 
   policy = jsonencode({
-    "Version" : "2012-10-17",
-    "Statement" : [
+    "Version": "2012-10-17",
+    "Statement": [
       {
-        "Effect" : "Allow",
-        "Action" : [
+        "Effect": "Allow",
+        "Action": [
+          "eks:CreateCluster",
+          "eks:DeleteCluster",
+          "eks:DescribeCluster",
+          "eks:ListClusters",
+          "eks:CreateNodegroup",
+          "eks:DeleteNodegroup",
+          "eks:DescribeNodegroup",
+          "eks:ListNodegroups",
+          "eks:UpdateClusterConfig",
+          "eks:UpdateNodegroupConfig",
           "logs:CreateLogGroup",
           "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ],
-        "Resource" : "arn:aws:logs:*:*:*"
-      },
-      {
-        "Effect" : "Allow",
-        "Action" : [
+          "logs:PutLogEvents",
           "iam:GetRolePolicy",
           "iam:GetPolicy",
           "iam:CreatePolicy",
           "iam:AttachRolePolicy",
           "iam:PassRole"
         ],
-        "Resource" : "*"
+        "Resource": "*"
       }
     ]
   })
@@ -116,7 +117,7 @@ resource "aws_iam_policy" "eks_permissions_policy" {
 
 # Attach IAM policy to the user
 resource "aws_iam_user_policy_attachment" "eks_policy_attachment" {
-  user       = var.user_name  # Replace with your IAM username
+  user       = var.user_name
   policy_arn = aws_iam_policy.eks_permissions_policy.arn
 }
 
