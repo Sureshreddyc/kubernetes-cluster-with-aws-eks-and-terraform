@@ -28,6 +28,30 @@ resource "aws_iam_user_policy_attachment" "admin_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
 
+# Custom Permissions for IAM User
+resource "aws_iam_user_policy" "custom_permissions" {
+  name = "custom-permissions"
+  user = aws_iam_user.default_admin_user.name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "iam:GetPolicy",
+          "iam:GetRolePolicy",
+          "iam:ListAttachedUserPolicies",
+          "iam:ListUserPolicies",
+          "iam:ListPolicies",
+          "iam:ListRoles"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
 # Data source to get availability zones
 data "aws_availability_zones" "available" {
   state = "available"
