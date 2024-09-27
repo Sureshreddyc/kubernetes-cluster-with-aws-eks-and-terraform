@@ -7,6 +7,11 @@ pipeline {
         AWS_SECRET_ACCESS_KEY = credentials('Secret-access-key')
     }
 
+    parameters {
+        booleanParam(name: 'AUTO_APPROVE_APPLY', defaultValue: false, description: 'Auto-approve the Terraform apply')
+        booleanParam(name: 'AUTO_APPROVE_DESTROY', defaultValue: false, description: 'Auto-approve the Terraform destroy')
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -36,10 +41,16 @@ pipeline {
 
         stage('Terraform Apply') {
             steps {
-                input message: 'Approve Terraform Apply?', ok: 'Apply'
                 script {
                     dir('terraform-eks') {
-                        sh 'terraform apply tfplan'
+                        if (params.AUTO_APPROVE_APPLY) {
+                            // Auto-approve if the parameter is set
+                            sh 'terraform apply tfplan'
+                        } else {
+                            // Manual approval step if auto-approve is not enabled
+                            input message: 'Approve Terraform Apply?', ok: 'Apply'
+                            sh 'terraform apply tfplan'
+                        }
                     }
                 }
             }
@@ -47,10 +58,16 @@ pipeline {
 
         stage('Terraform Destroy') {
             steps {
-                input message: 'Approve Terraform Destroy?', ok: 'Destroy'
                 script {
                     dir('terraform-eks') {
-                        sh 'terraform destroy -auto-approve'
+                        if (params.AUTO_APPROVE_DESTROY) {
+                            // Auto-approve destroy step
+                            sh 'terraform destroy -auto-approve'
+                        } else {
+                            // Manual approval step if auto-approve is not enabled
+                            input message: 'Approve Terraform Destroy?', ok: 'Destroy'
+                            sh 'terraform destroy -auto-approve'
+                        }
                     }
                 }
             }
