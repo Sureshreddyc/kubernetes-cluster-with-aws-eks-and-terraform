@@ -3,6 +3,11 @@ pipeline {
 
     environment {
         AWS_DEFAULT_REGION = 'ap-south-1' // Your specified region
+        // Set AWS credentials globally
+        withCredentials([ 
+            [$class: 'StringBinding', credentialsId: 'Access-key-ID', variable: 'AWS_ACCESS_KEY_ID'],
+            [$class: 'StringBinding', credentialsId: 'Secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY']
+        ])
     }
 
     stages {
@@ -15,12 +20,8 @@ pipeline {
         stage('Terraform Init') {
             steps {
                 script {
-                    withCredentials([ 
-                        [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id'] // Use the correct credentials ID for AWS
-                    ]) {
-                        dir('terraform-eks') { // Navigate to the Terraform directory
-                            sh 'terraform init'
-                        }
+                    dir('terraform-eks') { // Navigate to the Terraform directory
+                        sh 'terraform init'
                     }
                 }
             }
@@ -29,12 +30,8 @@ pipeline {
         stage('Terraform Plan') {
             steps {
                 script {
-                    withCredentials([ 
-                        [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id'] // Use the correct credentials ID for AWS
-                    ]) {
-                        dir('terraform-eks') {
-                            sh 'terraform plan -out=tfplan'
-                        }
+                    dir('terraform-eks') {
+                        sh 'terraform plan -out=tfplan'
                     }
                 }
             }
@@ -44,12 +41,8 @@ pipeline {
             steps {
                 input message: 'Approve Terraform Apply?', ok: 'Apply'
                 script {
-                    withCredentials([ 
-                        [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id'] // Use the correct credentials ID for AWS
-                    ]) {
-                        dir('terraform-eks') {
-                            sh 'terraform apply tfplan'
-                        }
+                    dir('terraform-eks') {
+                        sh 'terraform apply tfplan'
                     }
                 }
             }
@@ -59,12 +52,8 @@ pipeline {
             steps {
                 input message: 'Approve Terraform Destroy?', ok: 'Destroy'
                 script {
-                    withCredentials([ 
-                        [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id'] // Use the correct credentials ID for AWS
-                    ]) {
-                        dir('terraform-eks') {
-                            sh 'terraform destroy -auto-approve'
-                        }
+                    dir('terraform-eks') {
+                        sh 'terraform destroy -auto-approve'
                     }
                 }
             }
