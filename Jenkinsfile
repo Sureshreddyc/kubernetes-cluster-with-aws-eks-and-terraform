@@ -16,8 +16,7 @@ pipeline {
             steps {
                 script {
                     withCredentials([ 
-                        [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'Access-key-ID'],
-                        [$class: 'StringBinding', credentialsId: 'Secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY']
+                        [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id'] // Use the correct credentials ID for AWS
                     ]) {
                         dir('terraform-eks') { // Navigate to the Terraform directory
                             sh 'terraform init'
@@ -31,8 +30,7 @@ pipeline {
             steps {
                 script {
                     withCredentials([ 
-                        [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'Access-key-ID'],
-                        [$class: 'StringBinding', credentialsId: 'Secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY']
+                        [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id'] // Use the correct credentials ID for AWS
                     ]) {
                         dir('terraform-eks') {
                             sh 'terraform plan -out=tfplan'
@@ -47,8 +45,7 @@ pipeline {
                 input message: 'Approve Terraform Apply?', ok: 'Apply'
                 script {
                     withCredentials([ 
-                        [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'Access-key-ID'],
-                        [$class: 'StringBinding', credentialsId: 'Secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY']
+                        [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id'] // Use the correct credentials ID for AWS
                     ]) {
                         dir('terraform-eks') {
                             sh 'terraform apply tfplan'
@@ -63,8 +60,7 @@ pipeline {
                 input message: 'Approve Terraform Destroy?', ok: 'Destroy'
                 script {
                     withCredentials([ 
-                        [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'Access-key-ID'],
-                        [$class: 'StringBinding', credentialsId: 'Secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY']
+                        [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id'] // Use the correct credentials ID for AWS
                     ]) {
                         dir('terraform-eks') {
                             sh 'terraform destroy -auto-approve'
