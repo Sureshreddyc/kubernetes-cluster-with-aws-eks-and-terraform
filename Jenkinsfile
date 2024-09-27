@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        AWS_DEFAULT_REGION = 'ap-south-1' // Your specified region
+        AWS_DEFAULT_REGION = 'ap-south-1'
         AWS_ACCESS_KEY_ID = credentials('Access-key-ID')
         AWS_SECRET_ACCESS_KEY = credentials('Secret-access-key')
     }
@@ -37,6 +37,10 @@ pipeline {
                     }
                 }
             }
+            // Plan only when AUTO_APPROVE_DESTROY is not selected
+            when {
+                expression { return !params.AUTO_APPROVE_DESTROY }
+            }
         }
 
         stage('Terraform Apply') {
@@ -44,15 +48,17 @@ pipeline {
                 script {
                     dir('terraform-eks') {
                         if (params.AUTO_APPROVE_APPLY) {
-                            // Auto-approve if the parameter is set
                             sh 'terraform apply tfplan'
                         } else {
-                            // Manual approval step if auto-approve is not enabled
                             input message: 'Approve Terraform Apply?', ok: 'Apply'
                             sh 'terraform apply tfplan'
                         }
                     }
                 }
+            }
+            // Apply only when AUTO_APPROVE_DESTROY is not selected
+            when {
+                expression { return !params.AUTO_APPROVE_DESTROY }
             }
         }
 
@@ -61,22 +67,24 @@ pipeline {
                 script {
                     dir('terraform-eks') {
                         if (params.AUTO_APPROVE_DESTROY) {
-                            // Auto-approve destroy step
                             sh 'terraform destroy -auto-approve'
                         } else {
-                            // Manual approval step if auto-approve is not enabled
                             input message: 'Approve Terraform Destroy?', ok: 'Destroy'
                             sh 'terraform destroy -auto-approve'
                         }
                     }
                 }
             }
+            // Destroy only when AUTO_APPROVE_DESTROY is selected
+            when {
+                expression { return params.AUTO_APPROVE_DESTROY }
+            }
         }
     }
 
     post {
         success {
-            echo 'EKS Cluster created and destroyed successfully!'
+            echo 'Terraform operation completed successfully!'
         }
         failure {
             echo 'There was an error during the process.'
